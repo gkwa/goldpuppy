@@ -15,8 +15,10 @@ type FileLink struct {
 	Symlinks []string `json:"symlinks"`
 }
 
-var debug bool
-var skipDirs string
+var (
+	debug    bool
+	skipDirs string
+)
 
 func main() {
 	var filePaths []string
