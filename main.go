@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 )
 
 type FileLink struct {
@@ -16,18 +17,22 @@ type FileLink struct {
 }
 
 var (
-	debug    bool
-	skipDirs string
+	debug      bool
+	skipDirs   string
+	showReport bool
 )
 
 func main() {
+	startTime := time.Now()
+
 	var filePaths []string
 	var outputFile string
 
 	// Incorporate Golang flags
-	flag.StringVar(&outputFile, "output", "goldpuppy.json", "Path to the output JSON file")
+	flag.StringVar(&outputFile, "output", "", "Path to the output JSON file")
 	flag.StringVar(&skipDirs, "skipDirs", "/proc", "Comma-separated list of directories to skip while walking the file system")
 	flag.BoolVar(&debug, "debug", false, "Enable debug logging")
+	flag.BoolVar(&showReport, "report1", false, "Show output in the specified format")
 	flag.Parse()
 
 	filePaths = flag.Args()
@@ -39,15 +44,28 @@ func main() {
 
 	results := findSymlinks(filePaths)
 
-	// Write to the JSON file
-	file, err := os.Create(outputFile)
+	if showReport {
+		printReport(results)
+	}
+
+	if outputFile != "" {
+		writeToJSON(results, outputFile)
+	}
+
+	endTime := time.Now()
+	elapsedTime := endTime.Sub(startTime)
+	fmt.Printf("Runtime: %s\n", formatDuration(elapsedTime))
+}
+
+func writeToJSON(data interface{}, filename string) {
+	file, err := os.Create(filename)
 	if err != nil {
 		fmt.Printf("Error creating file: %v\n", err)
 		return
 	}
 	defer file.Close()
 
-	prettyJSON, err := json.MarshalIndent(results, "", "    ")
+	prettyJSON, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
 		fmt.Printf("Error encoding JSON: %v\n", err)
 		return
@@ -56,6 +74,16 @@ func main() {
 	_, err = file.Write(prettyJSON)
 	if err != nil {
 		fmt.Printf("Error writing to file: %v\n", err)
+	}
+}
+
+func printReport(results []FileLink) {
+	for _, link := range results {
+		fmt.Printf("%s:\n", link.FilePath)
+		for _, symlink := range link.Symlinks {
+			fmt.Printf("link: %s\n", symlink)
+		}
+		fmt.Println()
 	}
 }
 
@@ -121,4 +149,16 @@ func findSymlinks(filePaths []string) []FileLink {
 	}
 
 	return results
+}
+
+func formatDuration(duration time.Duration) string {
+	if duration < time.Second {
+		return fmt.Sprintf("%dms", duration.Milliseconds())
+	} else if duration < time.Minute {
+		return fmt.Sprintf("%ds", int(duration.Seconds()))
+	} else if duration < time.Hour {
+		return fmt.Sprintf("%dm %ds", int(duration.Minutes()), int(duration.Seconds())%60)
+	} else {
+		return fmt.Sprintf("%dh %dm %ds", int(duration.Hours()), int(duration.Minutes())%60, int(duration.Seconds())%60)
+	}
 }
