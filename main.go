@@ -32,7 +32,7 @@ func main() {
 	flag.StringVar(&outputFile, "output", "", "Path to the output JSON file")
 	flag.StringVar(&skipDirs, "skipDirs", "/proc", "Comma-separated list of directories to skip while walking the file system")
 	flag.BoolVar(&debug, "debug", false, "Enable debug logging")
-	flag.BoolVar(&showReport, "report1", false, "Show output in the specified format")
+	flag.BoolVar(&showReport, "report1", true, "Show output in the specified format")
 	flag.Parse()
 
 	filePaths = flag.Args()
