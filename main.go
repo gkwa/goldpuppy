@@ -17,9 +17,9 @@ type FileLink struct {
 }
 
 var (
-	debug      bool
-	skipDirs   string
-	showReport bool
+	debug         bool
+	skipDirs      string
+	noShowReport1 bool
 )
 
 func main() {
@@ -32,7 +32,7 @@ func main() {
 	flag.StringVar(&outputFile, "output", "", "Path to the output JSON file")
 	flag.StringVar(&skipDirs, "skipDirs", "/proc", "Comma-separated list of directories to skip while walking the file system")
 	flag.BoolVar(&debug, "debug", false, "Enable debug logging")
-	flag.BoolVar(&showReport, "report1", true, "Show output in the specified format")
+	flag.BoolVar(&noShowReport1, "no-report1", false, "Don't show output in the specified format")
 	flag.Parse()
 
 	filePaths = flag.Args()
@@ -44,7 +44,7 @@ func main() {
 
 	results := findSymlinks(filePaths)
 
-	if showReport {
+	if !noShowReport1 {
 		printReport(results)
 	}
 
@@ -54,7 +54,9 @@ func main() {
 
 	endTime := time.Now()
 	elapsedTime := endTime.Sub(startTime)
-	fmt.Printf("Runtime: %s\n", formatDuration(elapsedTime))
+	if debug {
+		fmt.Printf("Runtime: %s\n", formatDuration(elapsedTime))
+	}
 }
 
 func writeToJSON(data interface{}, filename string) {
@@ -78,12 +80,14 @@ func writeToJSON(data interface{}, filename string) {
 }
 
 func printReport(results []FileLink) {
-	for _, link := range results {
+	for i, link := range results {
 		fmt.Printf("%s:\n", link.FilePath)
 		for _, symlink := range link.Symlinks {
 			fmt.Printf("link: %s\n", symlink)
 		}
-		fmt.Println()
+		if i < len(results)-1 {
+			fmt.Println()
+		}
 	}
 }
 
@@ -121,6 +125,9 @@ func findSymlinks(filePaths []string) []FileLink {
 				}
 				for _, dir := range skippedDirectories {
 					if strings.HasPrefix(path, dir) {
+						if debug {
+							fmt.Printf("Skipping directory %s\n", dir)
+						}
 						return filepath.SkipDir
 					}
 				}
